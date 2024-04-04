@@ -1,0 +1,78 @@
+name: Chocolatine Workflow
+
+on:
+  push:
+    branches-ignore:
+      - 'ga-ignore-*'
+  pull_request:
+    branches-ignore:
+      - 'ga-ignore-*'
+
+env:
+  MIRROR_URL: git@github.com:EpitechPromo2028/B-DOP-200-BDX-2-1-chocolatine-armand.dufresne.git
+  EXECUTABLES: 'swapupcase'
+
+jobs:
+  check_coding_style:
+    name: Checking the coding style
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@master
+
+      - name: Run coding-style checker
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace ghcr.io/epitech/coding-style-checker:latest
+
+  check_program_compilation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    needs: check_coding_style
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Compile Repository
+        run: make
+      - name: Verify Executables
+        run: |
+          for file in ${{ env.EXECUTABLES }};do
+            if [ ! -x "$file" ]; then
+              echo "File $file does not exist or is not executable"
+              exit 1
+            fi
+          done
+
+  run_tests:
+    container: epitechcontent/epitest-docker:latest
+    name: Run Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    needs: check_program_compilation
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Tests
+        run: make tests_run
+
+      - name: Check integration test
+        run: ./unit_testing
+
+  Push_to_mirror:
+    name: Pushing to mirror repository
+    needs: [run_tests]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to Mirror
+        uses: pixta-dev/repository-mirroring-action@v1.1.1
+        with:
+          mirror_repository: ${{ env.MIRROR_URL }}
+          ssh_private_key: ${{ secrets.GIT_SSH_PRIVATE_KEY }}
