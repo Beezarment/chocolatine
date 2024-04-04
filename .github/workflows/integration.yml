@@ -72,7 +72,7 @@ jobs:
           fetch-depth: 0
 
       - name: Push to Mirror
-        uses: pixta-dev/repository-mirroring-action@v1.1.1
+        uses: pixta-dev/repository-mirroring-action@v1
         with:
-          mirror_repository: ${{ env.MIRROR_URL }}
+          target_repo_url: ${{ env.MIRROR_URL }}
           ssh_private_key: ${{ secrets.GIT_SSH_PRIVATE_KEY }}
